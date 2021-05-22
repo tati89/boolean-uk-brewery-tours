@@ -1,14 +1,16 @@
 const state = {
   breweries: [],
+  filters: {
+    type: "micro",
+    cities: ["Akron"],
+  },
 };
-
-listenToSelectStateForm();
 
 const mainEl = document.querySelector("main");
 const article = document.createElement("article");
-
 const ulEl = document.createElement("ul");
 ulEl.setAttribute("class", "breweries-list");
+
 article.append(ulEl);
 mainEl.append(article);
 
@@ -19,6 +21,8 @@ function getBreweriesByState(state) {
     return response.json();
   });
 }
+
+listenToSelectStateForm();
 
 function listenToSelectStateForm() {
   const formEl = document.querySelector("#select-state-form");
@@ -40,9 +44,7 @@ function listenToSelectStateForm() {
         );
       });
 
-      const slicedBreweries = filteredBreweries.slice(0, 10);
-
-      state.breweries = slicedBreweries;
+      state.breweries = filteredBreweries;
 
       const hi1El = document.createElement("h1");
       hi1El.innerText = "List of Breweries";
@@ -138,9 +140,27 @@ function createHeaderSearchBar() {
 }
 
 function renderBreweryList() {
-  for (const brewery of state.breweries) {
+  let breweriesToRender = state.breweries;
+
+  if (state.filters.type !== "") {
+    // code here depends on filter type
+    breweriesToRender = breweriesToRender.filter(function (brewery) {
+      return brewery.brewery_type === state.filters.type;
+    });
+  }
+
+  if (state.filters.cities.length > 0) {
+    // code here depends on filter cities
+    breweriesToRender = breweriesToRender.filter(function (brewery) {
+      return state.filters.cities.includes(brewery.city);
+    });
+  }
+
+  breweriesToRender = breweriesToRender.slice(0, 10);
+  for (const brewery of breweriesToRender) {
     renderSingleBreweryListItem(brewery);
   }
+  createFilterSection();
 }
 
 function renderSingleBreweryListItem(brewery) {
@@ -190,9 +210,10 @@ function createFilterSection() {
   option3El.innerText = "Brewpub";
 
   selectEl.append(optionEl, option1El, option2El, option3El);
+
   filterByTypeForm.append(labelTypeEl, selectEl);
 
-  //folter-by-city div
+  //filter-by-city div
   const cityFilterDiv = document.createElement("div");
   cityFilterDiv.setAttribute("class", "filter-by-city-heading");
 
@@ -209,32 +230,44 @@ function createFilterSection() {
   const filterByCityForm = document.createElement("form");
   filterByCityForm.setAttribute("id", "filter-by-city-form");
 
-  const inputChardon = document.createElement("input");
-  inputChardon.setAttribute("type", "checkbox");
-  inputChardon.setAttribute("name", "chardon");
-  inputChardon.setAttribute("value", "chardon");
-
-  const labelChardon = document.createElement("label");
-  labelChardon.setAttribute("for", "chardon");
-  labelChardon.innerText = "Chardon";
-
-  const inputCincinnati = document.createElement("input");
-  inputCincinnati.setAttribute("type", "checkbox");
-  inputCincinnati.setAttribute("name", "cincinnati");
-  inputCincinnati.setAttribute("value", "cincinnati");
-
-  const labelCincinnati = document.createElement("label");
-  labelCincinnati.setAttribute("for", "cincinnati");
-  labelCincinnati.innerText = "Cincinnati";
-
-  filterByCityForm.append(
-    inputChardon,
-    labelChardon,
-    inputCincinnati,
-    labelCincinnati
-  );
-
   asideFilterEl.append(h2El, filterByTypeForm, cityFilterDiv, filterByCityForm);
+
+  // selectEl.addEventListener("change", function () {
+  //   state.filters.type = selectEl.value;
+  //   console.log(selectEl.value);
+  //   for (const city of sortedCituesArray) {
+  //     const inputEl = document.createElement("input");
+  //     inputEl.setAttribute("type", "checkbox");
+  //     inputEl.setAttribute("name", city);
+  //     inputEl.setAttribute("value", city);
+
+  //     const labelEl = document.createElement("label");
+  //     labelEl.setAttribute("for", city);
+  //     labelEl.innerText = city;
+
+  //     filterByCityForm.append(inputEl, labelEl);
+  //   }
+  // });
+
+  const allCities = state.breweries.map(function (brewery) {
+    return brewery.city;
+  });
+
+  const uniqueCitiesArray = [...new Set(allCities)];
+  const sortedCituesArray = uniqueCitiesArray.slice().sort();
+
+  for (const city of sortedCituesArray) {
+    const inputEl = document.createElement("input");
+    inputEl.setAttribute("type", "checkbox");
+    inputEl.setAttribute("name", city);
+    inputEl.setAttribute("value", city);
+
+    const labelEl = document.createElement("label");
+    labelEl.setAttribute("for", city);
+    labelEl.innerText = city;
+
+    filterByCityForm.append(inputEl, labelEl);
+  }
 
   return asideFilterEl;
 }
