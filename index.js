@@ -25,11 +25,11 @@ formEl.addEventListener("submit", function (event) {
   getBreweriesByState(USState).then(function (breweriesFromServer) {
     const filteredBreweries = breweriesFromServer.filter(function (brewery) {
       // condition of the brewery I want to find
-      return (
-        brewery.brewery_type === "brewpub" ||
-        brewery.brewery_type === "micro" ||
-        brewery.brewery_type === "regional"
-      );
+      return ["brewpub", "micro", "regional"].includes(brewery.brewery_type);
+      //   brewery.brewery_type === "brewpub" ||
+      //     brewery.brewery_type === "micro" ||
+      //     brewery.brewery_type === "regional"
+      // );
     });
 
     state.breweries = filteredBreweries;
