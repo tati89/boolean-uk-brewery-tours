@@ -1,18 +1,11 @@
 const state = {
   breweries: [],
   filters: {
-    type: "micro",
-    cities: ["Akron"],
+    search: "",
+    type: "",
+    cities: [],
   },
 };
-
-const mainEl = document.querySelector("main");
-const article = document.createElement("article");
-const ulEl = document.createElement("ul");
-ulEl.setAttribute("class", "breweries-list");
-
-article.append(ulEl);
-mainEl.append(article);
 
 function getBreweriesByState(state) {
   return fetch(
@@ -22,39 +15,48 @@ function getBreweriesByState(state) {
   });
 }
 
-listenToSelectStateForm();
+const mainEl = document.querySelector("main");
+const formEl = document.querySelector("#select-state-form");
 
-function listenToSelectStateForm() {
-  const formEl = document.querySelector("#select-state-form");
+formEl.addEventListener("submit", function (event) {
+  event.preventDefault();
 
-  formEl.addEventListener("submit", function (event) {
-    event.preventDefault();
-
-    // get the user's input from the select-state input on the form
-    // NOTE: forms have properties for every input with a name within it
-    const USState = formEl["select-state"].value;
-
-    getBreweriesByState(USState).then(function (breweriesFromServer) {
-      const filteredBreweries = breweriesFromServer.filter(function (brewery) {
-        // condition of the brewery I want to find
-        return (
-          brewery.brewery_type === "brewpub" ||
-          brewery.brewery_type === "micro" ||
-          brewery.brewery_type === "regional"
-        );
-      });
-
-      state.breweries = filteredBreweries;
-
-      const hi1El = document.createElement("h1");
-      hi1El.innerText = "List of Breweries";
-
-      const header = createHeaderSearchBar();
-      let asideFilterEl = createFilterSection();
-      mainEl.append(hi1El, header, asideFilterEl);
-      renderBreweryList();
+  const USState = formEl["select-state"].value;
+  getBreweriesByState(USState).then(function (breweriesFromServer) {
+    const filteredBreweries = breweriesFromServer.filter(function (brewery) {
+      // condition of the brewery I want to find
+      return (
+        brewery.brewery_type === "brewpub" ||
+        brewery.brewery_type === "micro" ||
+        brewery.brewery_type === "regional"
+      );
     });
+
+    state.breweries = filteredBreweries;
+
+    renderState();
   });
+});
+
+function renderState() {
+  mainEl.innerHTML = "";
+  const articleEl = document.createElement("article");
+  const ulEl = document.createElement("ul");
+  ulEl.setAttribute("class", "breweries-list");
+
+  articleEl.append(ulEl);
+  mainEl.append(articleEl);
+
+  // Render all the stuff
+  const hi1El = document.createElement("h1");
+  hi1El.innerText = "List of Breweries";
+  const header = createHeaderSearchBar();
+
+  let asideFilterEl = createFilterSection();
+
+  ulEl.innerHTML = "";
+  renderBreweryList();
+  mainEl.append(hi1El, header, asideFilterEl);
 }
 
 //return li
@@ -131,6 +133,13 @@ function createHeaderSearchBar() {
   searchInputEl.setAttribute("id", "search-breweries");
   searchInputEl.setAttribute("name", "search-breweries");
   searchInputEl.setAttribute("type", "text");
+  searchInputEl.value = state.filters.search;
+
+  searchForm.addEventListener("input", function (event) {
+    event.preventDefault();
+    state.filters.search = searchInputEl.value;
+    renderBreweryList();
+  });
 
   searchForm.append(labelSearchEl, searchInputEl);
 
@@ -140,12 +149,24 @@ function createHeaderSearchBar() {
 }
 
 function renderBreweryList() {
+  const ulEl = document.querySelector("ul");
+  ulEl.innerHTML = "";
   let breweriesToRender = state.breweries;
 
   if (state.filters.type !== "") {
     // code here depends on filter type
     breweriesToRender = breweriesToRender.filter(function (brewery) {
       return brewery.brewery_type === state.filters.type;
+    });
+  }
+
+  if (state.filters.search !== "") {
+    breweriesToRender = breweriesToRender.filter(function (brewery) {
+      return (
+        brewery.name
+          .toLowerCase()
+          .indexOf(state.filters.search.toLowerCase()) !== -1
+      );
     });
   }
 
@@ -164,6 +185,7 @@ function renderBreweryList() {
 }
 
 function renderSingleBreweryListItem(brewery) {
+  const ulEl = document.querySelector("ul");
   // code to put a single brewery on the page here...
   let liEl = createSingleBreweryItem(brewery);
   ulEl.append(liEl);
@@ -200,14 +222,28 @@ function createFilterSection() {
   const option1El = document.createElement("option");
   option1El.setAttribute("value", "micro");
   option1El.innerText = "Micro";
+  if (state.filters.type == "micro") {
+    option1El.setAttribute("selected", "selected");
+  }
 
   const option2El = document.createElement("option");
   option2El.setAttribute("value", "regional");
   option2El.innerText = "Regional";
+  if (state.filters.type == "regional") {
+    option2El.setAttribute("selected", "selected");
+  }
 
   const option3El = document.createElement("option");
   option3El.setAttribute("value", "brewpub");
   option3El.innerText = "Brewpub";
+  if (state.filters.type == "brewpub") {
+    option3El.setAttribute("selected", "selected");
+  }
+
+  selectEl.addEventListener("change", function () {
+    state.filters.type = selectEl.value;
+    renderBreweryList();
+  });
 
   selectEl.append(optionEl, option1El, option2El, option3El);
 
@@ -232,23 +268,6 @@ function createFilterSection() {
 
   asideFilterEl.append(h2El, filterByTypeForm, cityFilterDiv, filterByCityForm);
 
-  // selectEl.addEventListener("change", function () {
-  //   state.filters.type = selectEl.value;
-  //   console.log(selectEl.value);
-  //   for (const city of sortedCituesArray) {
-  //     const inputEl = document.createElement("input");
-  //     inputEl.setAttribute("type", "checkbox");
-  //     inputEl.setAttribute("name", city);
-  //     inputEl.setAttribute("value", city);
-
-  //     const labelEl = document.createElement("label");
-  //     labelEl.setAttribute("for", city);
-  //     labelEl.innerText = city;
-
-  //     filterByCityForm.append(inputEl, labelEl);
-  //   }
-  // });
-
   const allCities = state.breweries.map(function (brewery) {
     return brewery.city;
   });
@@ -261,6 +280,22 @@ function createFilterSection() {
     inputEl.setAttribute("type", "checkbox");
     inputEl.setAttribute("name", city);
     inputEl.setAttribute("value", city);
+
+    if (state.filters.cities.includes(inputEl.value)) {
+      inputEl.setAttribute("checked", true);
+    }
+
+    inputEl.addEventListener("change", function () {
+      if (state.filters.cities.includes(inputEl.value)) {
+        let index = state.filters.cities.indexOf(inputEl.value);
+        if (index > -1) {
+          state.filters.cities.splice(index, 1);
+        }
+      } else {
+        state.filters.cities.push(inputEl.value);
+      }
+      renderBreweryList();
+    });
 
     const labelEl = document.createElement("label");
     labelEl.setAttribute("for", city);
